@@ -19,6 +19,27 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # Stable debug signing across runs so each debug APK can update the previous
+      # install instead of erroring "App not installed". The keystore is generated
+      # once, cached, and reused; build.gradle.kts points the debug signingConfig
+      # at it when present (no-op for builds without the file).
+      - name: Restore debug keystore
+        uses: actions/cache@v4
+        with:
+          path: dogfood-debug.keystore
+          key: debug-keystore-v1
+
+      - name: Ensure debug keystore
+        run: |
+          if [ ! -f dogfood-debug.keystore ]; then
+            keytool -genkeypair -v \
+              -keystore dogfood-debug.keystore \
+              -storepass android -keypass android \
+              -alias androiddebugkey \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
       - name: Lint
         run: ./gradlew :app:lintDebug
 

@@ -20,6 +20,11 @@ android {
     namespace = "dev.blazelight.p4oc"
     compileSdk = 36
 
+    // A fixed debug keystore (generated/cached in CI) so successive debug APKs share
+    // a signing key and can update each other. No-op when the file isn't present, so
+    // local and PR builds fall back to AGP's auto-generated debug key.
+    val dogfoodDebugKeystore = rootProject.file("dogfood-debug.keystore")
+
     signingConfigs {
         create("release") {
             val storeFilePath = localProperties.getProperty("RELEASE_STORE_FILE")
@@ -28,6 +33,14 @@ android {
                 storePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD")
                 keyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS")
                 keyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD")
+            }
+        }
+        if (dogfoodDebugKeystore.exists()) {
+            create("dogfood") {
+                storeFile = dogfoodDebugKeystore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
             }
         }
     }
@@ -66,6 +79,9 @@ android {
             isMinifyEnabled = false
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            if (dogfoodDebugKeystore.exists()) {
+                signingConfig = signingConfigs.getByName("dogfood")
+            }
         }
     }
 
